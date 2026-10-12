@@ -59,19 +59,12 @@ h1 em{font-style:normal;color:var(--accent)}
 .lead{max-width:62ch;color:var(--muted)}
 .note{background:var(--warnbg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-size:.92rem;max-width:80ch}
 .note b{color:var(--warn)}
-.srcs summary{cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 14px;font-family:var(--f-cond);font-weight:600;font-size:1.05rem;list-style:none}
-.srcs summary::-webkit-details-marker{display:none}
-.srcs details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin-top:10px;overflow:hidden}
-.srcs details[open] summary{border-bottom:1px solid var(--line)}
-.srcs summary .muted{font-family:var(--f-mono);font-size:.82rem;font-weight:400}
-.srcs .doc{padding:12px 14px;border-top:1px solid var(--line)}
-.srcs .doc:first-of-type{border-top:0}
-.srcs .doc b{display:block;font-weight:600;margin-bottom:6px}
-.srcs .qs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.srcs .qs .muted{font-size:.84rem;margin-right:4px}
-.srcs .qb{font-family:var(--f-mono);font-size:.84rem;background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:3px 9px;min-height:30px}
-.srcs .qb:hover{border-color:var(--accent)}
-.srcs a{color:var(--accent)}
+.srcs .sgrp{margin-top:18px}
+.srcs h3{font-size:1.1rem;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.srcs ul{list-style:none;margin:0;padding:0}
+.srcs li{display:flex;justify-content:space-between;gap:16px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line)}
+.srcs li .muted{font-size:.82rem;text-align:right;flex:0 1 55%}
+@media (max-width:560px){.srcs li{flex-direction:column;gap:2px}.srcs li .muted{text-align:left;flex:none}}
 /* blueprint bar */
 .bp{display:flex;height:44px;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:22px 0 6px}
 .bp div{display:flex;align-items:center;justify-content:center;font-family:var(--f-mono);font-size:.82rem;font-weight:500;color:#0a0a0a;min-width:0;padding-inline:4px;white-space:nowrap;overflow:hidden}
@@ -290,16 +283,11 @@ function sourcesSection(){
   const groups=[...new Set(DOCS.map(d=>d.g))];
   return h('section',{class:'srcs',id:'documents',style:'margin-top:26px'},
     h('h2',null,'Documents sources'),
-    h('p',{class:'muted',style:'margin-top:4px;max-width:70ch'},'Les documents cités dans les réponses, avec les questions qui s’y rapportent. Cliquez sur un numéro pour ouvrir la question.'),
-    groups.map(g=>{
-      const ds=DOCS.filter(d=>d.g===g);
-      return h('details',null,
-        h('summary',null,h('span',null,g),h('span',{class:'muted'},ds.length+(ds.length>1?' documents':' document'))),
-        ds.map(d=>h('div',{class:'doc'},
-          h('b',null,d.n),
-          h('div',{class:'qs'},h('span',{class:'muted'},'Questions'),d.q.map(id=>h('button',{class:'qb',onclick:()=>jump(id),'aria-label':'Ouvrir la question '+id},String(id)))),
-          g==='Vidéos du cours'? h('p',{style:'margin-top:8px;font-size:.92rem'},h('a',{href:COURSE_URL,target:'_blank',rel:'noopener noreferrer'},'Ouvrir la plateforme de cours')):null)));
-    }));
+    h('p',{class:'muted',style:'margin-top:4px;max-width:70ch'},'Les documents cités dans les réponses, avec les numéros des questions qui s’y rapportent.'),
+    groups.map(g=>h('div',{class:'sgrp'},
+      h('h3',null,g),
+      h('ul',null,DOCS.filter(d=>d.g===g).map(d=>h('li',null,h('span',null,d.n),h('span',{class:'muted mono'},'Q'+d.q.join(', Q'))))),
+      g==='Vidéos du cours'? h('p',{class:'muted',style:'margin-top:8px;font-size:.9rem;overflow-wrap:anywhere'},'Plateforme de cours : '+COURSE_URL):null)));
 }
 function home(){
   const st=stats();
