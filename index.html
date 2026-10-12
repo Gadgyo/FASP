@@ -11,7 +11,14 @@
   --f-sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
   --f-cond:'IBM Plex Sans Condensed','IBM Plex Sans',system-ui,sans-serif;
   --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  --on-ok:#0a0a0a; --on-bad:#0a0a0a;
   color-scheme:dark;
+}
+:root[data-theme=light]{
+  --bg:#f6f4f1; --surface:#ffffff; --surface2:#efece8; --ink:#1b1917; --muted:#5d5954; --line:#d8d3cc;
+  --accent:#d13d08; --accent-ink:#ffffff; --ok:#17803f; --okbg:#e2f4e9; --bad:#c0322a; --badbg:#fbe5e2; --warn:#9a5b00; --warnbg:#fff0d4;
+  --on-ok:#ffffff; --on-bad:#ffffff;
+  color-scheme:light;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -95,9 +102,9 @@ select{background:var(--surface2);border:1px solid var(--line);border-radius:6px
 .opt.sel{border-color:var(--accent);background:var(--surface2)}
 .opt.sel .ltr{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .opt.good{border-color:var(--ok);background:var(--okbg)}
-.opt.good .ltr{background:var(--ok);color:#0a0a0a;border-color:var(--ok)}
+.opt.good .ltr{background:var(--ok);color:var(--on-ok);border-color:var(--ok)}
 .opt.wrong{border-color:var(--bad);background:var(--badbg)}
-.opt.wrong .ltr{background:var(--bad);color:#0a0a0a;border-color:var(--bad)}
+.opt.wrong .ltr{background:var(--bad);color:var(--on-bad);border-color:var(--bad)}
 .opt[disabled]{cursor:default}
 .opt .tag{display:block;font-size:.8rem;font-weight:600;margin-top:2px}
 .opt.good .tag{color:var(--ok)}.opt.wrong .tag{color:var(--bad)}
@@ -166,6 +173,12 @@ const KEY='fasp-entrainement-v1';
 function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){return {}}}
 function save(p){try{localStorage.setItem(KEY,JSON.stringify(p))}catch(e){}}
 let prog = load();
+/* theme: dark by default, light on request, remembered per viewer */
+const TKEY='fasp-theme';
+function getTheme(){try{return localStorage.getItem(TKEY)==='light'?'light':'dark'}catch(e){return 'dark'}}
+function applyTheme(m){document.documentElement.setAttribute('data-theme',m);const b=document.getElementById('themebtn');if(b){b.textContent=m==='light'?'Fond sombre':'Fond clair';b.setAttribute('aria-label',m==='light'?'Passer au fond sombre':'Passer au fond clair')}}
+function toggleTheme(){const m=getTheme()==='light'?'dark':'light';try{localStorage.setItem(TKEY,m)}catch(e){}applyTheme(m)}
+applyTheme(getTheme());
 
 const app = document.getElementById('app');
 function h(tag, attrs, ...kids){
@@ -194,7 +207,7 @@ function lightbox(src){
 function topbar(right){
   return h('div',{class:'top'},
     h('div',{class:'brand'},h('span',{class:'mark','aria-hidden':'true'},'FA'),'Entraînement FASP'),
-    h('div',{class:'row'}, right||null));
+    h('div',{class:'row'}, right||null, h('button',{class:'btn ghost',id:'themebtn',onclick:toggleTheme},getTheme()==='light'?'Fond sombre':'Fond clair')));
 }
 function chip(q){
   const dm=dom(q.c[0]);
