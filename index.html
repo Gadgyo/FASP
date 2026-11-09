@@ -187,6 +187,20 @@ function getTheme(){try{return localStorage.getItem(TKEY)==='light'?'light':'dar
 function applyTheme(m){document.documentElement.setAttribute('data-theme',m);const b=document.getElementById('themebtn');if(b){b.textContent=m==='light'?'Fond sombre':'Fond clair';b.setAttribute('aria-label',m==='light'?'Passer au fond sombre':'Passer au fond clair')}}
 function toggleTheme(){const m=getTheme()==='light'?'dark':'light';try{localStorage.setItem(TKEY,m)}catch(e){}applyTheme(m)}
 applyTheme(getTheme());
+/* in-progress session (per-viewer convenience only): lets a paused run be resumed, including from another tab of the same browser */
+const SKEY='fasp-session-v1';
+function saveSession(){ if(!S) return; try{ localStorage.setItem(SKEY, JSON.stringify({mode:S.mode, ids:S.qs.map(q=>q.id), i:S.i, ans:S.ans, done:S.done, t0:S.t0})) }catch(e){} }
+function loadSession(){ try{ const r=localStorage.getItem(SKEY); return r?JSON.parse(r):null }catch(e){ return null } }
+function clearSession(){ try{ localStorage.removeItem(SKEY) }catch(e){} }
+function resumeSession(){
+  const s=loadSession(); if(!s) return;
+  const qs=s.ids.map(id=>Q.find(q=>q.id===id)).filter(Boolean);
+  if(!qs.length){ clearSession(); home(); return; }
+  S={mode:s.mode, qs:qs, i:Math.min(s.i, qs.length-1), ans:s.ans||{}, done:s.done||{}, t0:s.t0||Date.now()};
+  clearInterval(timer);
+  if(S.mode==='exam') timer=setInterval(()=>{const e=document.getElementById('clock'); if(e) e.textContent=fmt(Math.floor((Date.now()-S.t0)/1000))},1000);
+  question();
+}
 
 const app = document.getElementById('app');
 function h(tag, attrs, ...kids){
@@ -293,6 +307,15 @@ function home(){
   const st=stats();
   const bp=h('div',{class:'bp',role:'img','aria-label':'Pondération des domaines de l’examen'},DOMS.map(d=>h('div',{class:'c'+d.k,style:'flex:'+d.w},d.w+' %')));
   const bpl=h('p',{class:'bpl'},DOMS.map(d=>d.n.split(' (')[0]+' '+d.w+' %').join(' · '));
+  const savedSession=loadSession();
+  const resumeCard=(savedSession&&savedSession.ids&&savedSession.ids.length)?h('div',{class:'card',style:'margin:20px 0;border-color:var(--accent)'},
+    h('div',{class:'row',style:'justify-content:space-between;align-items:center'},
+      h('div',null,
+        h('div',{class:'muted',style:'font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600'},'Session en pause'),
+        h('h3',{style:'margin-top:4px'},'Reprendre à la question '+(savedSession.i+1)+' / '+savedSession.ids.length+' ('+Object.keys(savedSession.done||{}).length+' déjà validées)')),
+      h('div',{class:'row'},
+        h('button',{class:'btn primary',onclick:resumeSession},'Reprendre →'),
+        h('button',{class:'btn ghost',onclick:()=>{clearSession();home()}},'Abandonner')))):null;
   const scopeSel=h('select',{id:'scope',onchange:e=>cfg.scope=e.target.value},
     h('option',{value:'all'},'Toutes les questions ('+Q.length+')'),
     DOMS.map(d=>h('option',{value:'d'+d.k},d.n+' ('+Q.filter(q=>q.c[0]===d.k).length+')')),
@@ -322,7 +345,7 @@ function home(){
   mount(topbar(),
     h('h1',null,'Préparation à la certification FlashArray ',h('em',null,'Storage Professional')),
     h('p',{class:'lead',style:'margin-top:12px'},Q.length+' questions d’entraînement, classées selon les cinq domaines de l’examen. Chaque réponse s\u2019accompagne de son explication et de sa source officielle (document, section, page, passage cité et extrait de la documentation).'),
-    bp,bpl,
+    bp,bpl,resumeCard,
     h('div',{class:'note'},h('b',null,'À savoir. '),'Ce site est un outil d’entraînement indépendant, non officiel. Les réponses viennent de recherches dans la documentation et peuvent contenir des erreurs : les versions de Purity//FA, de FlashArray et de Pure1 évoluent. Vérifiez toujours dans la source indiquée.'),
     h('div',{class:'card',style:'margin-top:22px'},
       h('h2',null,'Lancer une session'),
@@ -363,12 +386,13 @@ function start(over){
 }
 function record(q,ok){ prog[q.id]=ok?1:0; save(prog); }
 function question(){
+  saveSession();
   const q=S.qs[S.i], total=S.qs.length, exam=S.mode==='exam';
   const sel=S.ans[q.id]; const done=!!S.done[q.id];
   const right=h('div',{class:'row'},
     exam? h('span',{class:'chip mono',id:'clock'},fmt(Math.floor((Date.now()-S.t0)/1000))):null,
     h('button',{class:'btn',onclick:()=>openSummary(q.id)},'Sommaire'),
-    h('button',{class:'btn ghost',onclick:()=>{clearInterval(timer);home()}},'Quitter'));
+    h('button',{class:'btn ghost',onclick:()=>{clearInterval(timer);if(Object.keys(S.ans).length===0)clearSession();home()}},'Quitter'));
   const fs=h('div',{class:'opts',role:'radiogroup','aria-label':'Réponses'});
   q.o.forEach((t,k)=>{
     let cls='opt'; let tag=null;
@@ -402,7 +426,7 @@ function question(){
 }
 let confirmFinish=false;
 function results(){
-  clearInterval(timer); confirmFinish=false;
+  clearInterval(timer); confirmFinish=false; clearSession();
   const exam=S.mode==='exam';
   if(exam) S.qs.forEach(q=>record(q,S.ans[q.id]===q.a[0]));
   const ok=S.qs.filter(q=>S.ans[q.id]===q.a[0]); const wrong=S.qs.filter(q=>S.ans[q.id]!==q.a[0]);
